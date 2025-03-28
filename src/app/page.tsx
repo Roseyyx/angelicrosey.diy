@@ -1,95 +1,80 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Image from 'next/image'
+import styles from './page.module.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTwitter, faLastfm, faGithub } from '@fortawesome/free-brands-svg-icons'
 
-export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+const URL = (apiKey: any) => `http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=angelicrosey&api_key=${apiKey}&format=json&limit=1&nowplaying=true`
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+async function fetchData() {
+	const apiKey = process.env.API_KEY // Make sure you've set this in your environment variables
+	const res = await fetch(URL(apiKey), {
+		cache: 'force-cache', // Use this to cache the response at the server level (not on each client request)
+		next: {
+			revalidate: 60 // Revalidate the cache every 60 seconds
+		}
+	})
+
+	if (!res.ok) {
+		throw new Error('Failed to fetch data')
+	}
+	const data = await res.json()
+	const track = data.recenttracks.track[0]
+
+	return {
+		song: track ? track.name : 'Song Name',
+		artist: track ? track.artist['#text'] : 'Artist Name',
+		cover: track ? track.image[3]['#text'] : '/avatar.jpg' // Set default image if not found
+	}
+}
+
+export default async function Home() {
+	const { song, artist, cover } = await fetchData()
+	// Fallback values if fetch fails
+	const fallbackSong = song || 'Song Name'
+	const fallbackArtist = artist || 'Artist Name'
+	const fallbackCover = cover || '/avatar.jpg'
+	return (
+		<section className={styles.home}>
+			<div className={styles.avatar}>
+				<Image src="/avatar.jpg" alt="Avatar" width={500} height={500} />
+			</div>
+			<div className={styles.about}>
+				<h1 className={styles.name}>Rose</h1>
+				<h2>20 she/her</h2>
+			</div>
+			<div className={styles.socials}>
+				<div className={styles.circle}>
+					<a href="" target="_blank">
+						<FontAwesomeIcon icon={faTwitter} className="fa-fw" />
+					</a>
+				</div>
+				<div className={styles.circle}>
+					<a href="https://www.last.fm/user/angelicrosey" target="_blank">
+						<FontAwesomeIcon icon={faLastfm} className="fa-fw" />
+					</a>
+				</div>
+				<div className={styles.circle}>
+					<a href="https://github.com/Roseyyx" target="_blank">
+						<FontAwesomeIcon icon={faGithub} className="fa-fw" />
+					</a>
+				</div>
+			</div>
+			<div className={styles.status}>
+				<div className={styles.item}>
+					<div className={styles.cover}>
+						<Image src={cover} alt="Album Cover" className={styles.coverid} width={500} height={500} />
+					</div>
+					<div className={styles.text}>
+						<p className={styles.header}>Now playing</p>
+						<p className={styles.textid}>
+							<b>{song}</b>
+						</p>
+						<p className={styles.textid}>
+							by <b>{artist}</b>
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+	)
 }
